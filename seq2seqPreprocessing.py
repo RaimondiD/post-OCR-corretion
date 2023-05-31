@@ -104,17 +104,26 @@ def make_input_dataset(list_of_sequences : list[list[str]]):
         remove_separator_symbols_function = substitute_symbol_func_factory(f"{ENCODING_DEFAULT_SEPARATOR_SYMBOL}")
         return list(map(remove_separator_symbols_function,list_of_sequences))
 
+def create_regular_ML_dataset(sequence_of_chars_dataset : list[list[str]], encoding_object):
+    encoded_dataset = [encoding_object.encode_sequence(sequence) for sequence in sequence_of_chars_dataset]
+    not_used_index = len(encoding_object.index_char_dictionary)
+    lenght_of_longest_sequence = len(max(encoded_dataset,key=len))
+    return list(map(lambda sequence_of_char : padding_to_distance(sequence_of_char,lenght_of_longest_sequence,not_used_index), encoded_dataset))
+
+
+def padding_to_distance(sequence_of_char :list[str], length_of_longest_sequence :int, padding_symbol : int):
+    distance_to_longest = length_of_longest_sequence - len(sequence_of_char)
+    return sequence_of_char + [padding_symbol for _ in range(distance_to_longest)]
 
 def transform_data(number_of_sample = 20):
     dataset_sample = load_dataset()[:number_of_sample]
     cleaned_dataset_sample = clean_dataset(dataset_sample)
     output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
     input_sentence_dataset = make_input_dataset(output_sentence_dataset)   #the input dataset is equal to the output without the spaces
-    input_sequence_of_chars = sentence_as_a_list_of_chars(input_sentence_dataset)
-    output_sequence_of_chars = sentence_as_a_list_of_chars(output_sentence_dataset)
-    char_dictionary = create_char_dictionary(output_sequence_of_chars)
+    input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
+    output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
+    char_dictionary = create_char_dictionary(output_sequence_of_chars_dataset)
     encoding_object = IndexTranslator(char_dictionary)
-    encoded_input = [encoding_object.encode_sequence(sequence) for sequence in input_sequence_of_chars]
-    encoded_output = [encoding_object.encode_sequence(sequence) for sequence in output_sequence_of_chars]
-    return encoded_input,encoded_output
+
+    return create_regular_ML_dataset(input_sequence_of_chars_dataset,encoding_object), create_regular_ML_dataset(output_sequence_of_chars_dataset,encoding_object)
 
