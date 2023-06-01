@@ -13,7 +13,7 @@ MAX_SEQUENCE_LEN = 120
 END_OF_SENTENCE_SYMBOL = "EOS"  
 START_OF_SENTENCE_SYMBOL = "SOS"
 
-class IndexTranslator():
+class IndexTranslator(): #TODO add methods requested in seq2seqLearning.py, fix the padding question
 
     def __init__(self,index_char_dictionary: dict[int:str]) -> None:
         self.index_char_dictionary = index_char_dictionary
@@ -99,7 +99,7 @@ def create_char_dictionary(dataset : list [list[str]]):
     return char_dictionary
 
 
-def make_input_dataset(list_of_sequences : list[list[str]]):
+def make_input_dataset(list_of_sequences : list[str]):
         assert(len(max(list_of_sequences, key = len)) <= MAX_SEQUENCE_LEN)
         remove_separator_symbols_function = substitute_symbol_func_factory(f"{ENCODING_DEFAULT_SEPARATOR_SYMBOL}")
         return list(map(remove_separator_symbols_function,list_of_sequences))
@@ -115,11 +115,15 @@ def padding_to_distance(sequence_of_char :list[str], length_of_longest_sequence 
     distance_to_longest = length_of_longest_sequence - len(sequence_of_char)
     return sequence_of_char + [padding_symbol for _ in range(distance_to_longest)]
 
-def transform_data(number_of_sample = 20):
-    dataset_sample = load_dataset()[:number_of_sample]
+def get_clean_string_dataset():
+    dataset_sample = load_dataset()
     cleaned_dataset_sample = clean_dataset(dataset_sample)
     output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
-    input_sentence_dataset = make_input_dataset(output_sentence_dataset)   #the input dataset is equal to the output without the spaces
+    input_sentence_dataset = make_input_dataset(output_sentence_dataset)
+    return input_sentence_dataset,output_sentence_dataset
+
+def transform_data_to_token(): 
+    output_sentence_dataset ,input_sentence_dataset = get_clean_string_dataset()
     input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
     output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
     char_dictionary = create_char_dictionary(output_sequence_of_chars_dataset)
