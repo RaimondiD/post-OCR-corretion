@@ -12,19 +12,50 @@ DATASET_WORD_SEPARATOR_SYMBOL = ' '
 MAX_SEQUENCE_LEN = 120
 END_OF_SENTENCE_SYMBOL = "EOS"  
 START_OF_SENTENCE_SYMBOL = "SOS"
+DEFAULT_PADDING_SYMBOL = "PAD"
 
-class IndexTranslator(): #TODO add methods requested in seq2seqLearning.py, fix the padding question
-
-    def __init__(self,index_char_dictionary: dict[int:str]) -> None:
-        self.index_char_dictionary = index_char_dictionary
-        self.char_index_dictionary = {char:index for index,char in index_char_dictionary.items()}
+class IndexTranslator():
     
-    def encode_sequence(self, sentence_as_a_sequence :list[str]):
+    def __init__(self, dataset : list [list[str]]) -> None:
+        self.index_char_dictionary = self.__create_char_dictionary(dataset)
+        self.char_index_dictionary = {char:index for index,char in self.index_char_dictionary.items()}
+    
+    def encode_sequence(self, sentence_as_a_sequence :list[str]) -> list[str]:
         return [self.char_index_dictionary[char] for char in sentence_as_a_sequence]
     
-    def sequence_from_encode(self, encoded_sequence :list[int]):
+    def sequence_from_encode(self, encoded_sequence :list[int]) -> list[str]:
         return [self.index_char_dictionary[index] for index in encoded_sequence]
+    
+    def __create_char_dictionary(dataset : list [list[str]]):
+        set_of_char = set([START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL,DEFAULT_PADDING_SYMBOL])
+        for sequence in dataset:
+            set_of_char = set_of_char.union(sequence)
+        char_dictionary = {index : char for index,char in enumerate(set_of_char)}
+        return char_dictionary
+    
+    def get_padding_index(self) -> int:
+        return self.char_index_dictionary(DEFAULT_PADDING_SYMBOL)
+    
+    def get_vocabolary_dimension(self) -> int:
+        return len(self.char_index_dictionary)
+        
+def transform_data_to_token(): 
+    output_sentence_dataset ,input_sentence_dataset = get_clean_string_dataset()
+    input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
+    output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
+    encoding_object = IndexTranslator(output_sequence_of_chars_dataset)
 
+    return (create_regular_ML_dataset(input_sequence_of_chars_dataset,encoding_object), 
+        create_regular_ML_dataset(output_sequence_of_chars_dataset,encoding_object),
+        encoding_object)
+
+
+def get_clean_string_dataset():
+    dataset_sample = load_dataset()
+    cleaned_dataset_sample = clean_dataset(dataset_sample)
+    output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
+    input_sentence_dataset = make_input_dataset(output_sentence_dataset)
+    return input_sentence_dataset,output_sentence_dataset
 
 
 def load_dataset(): 
@@ -91,43 +122,20 @@ def split_in_middle_space(long_char_sequence : str):
         return []  #this appen when a single word is longer than the maximum lenght of sequence; in this case we ignore the world because we assume that is an error in the dataset
     return (long_char_sequence[:best_index],long_char_sequence[best_index+1:])
 
-def create_char_dictionary(dataset : list [list[str]]):
-    set_of_char = set([START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL])
-    for sequence in dataset:
-        set_of_char = set_of_char.union(sequence)
-    char_dictionary = {index : char for index,char in enumerate(set_of_char)}
-    return char_dictionary
-
 
 def make_input_dataset(list_of_sequences : list[str]):
         assert(len(max(list_of_sequences, key = len)) <= MAX_SEQUENCE_LEN)
         remove_separator_symbols_function = substitute_symbol_func_factory(f"{ENCODING_DEFAULT_SEPARATOR_SYMBOL}")
         return list(map(remove_separator_symbols_function,list_of_sequences))
 
-def create_regular_ML_dataset(sequence_of_chars_dataset : list[list[str]], encoding_object):
+def create_regular_ML_dataset(sequence_of_chars_dataset : list[list[str]], encoding_object : IndexTranslator):
     encoded_dataset = [encoding_object.encode_sequence(sequence) for sequence in sequence_of_chars_dataset]
-    not_used_index = len(encoding_object.index_char_dictionary)
-    lenght_of_longest_sequence = len(max(encoded_dataset,key=len))
-    return list(map(lambda sequence_of_char : padding_to_distance(sequence_of_char,lenght_of_longest_sequence,not_used_index), encoded_dataset))
+    padding_index = encoding_object.get_padding_index()
+    lenght_of_longest_sequence = len(max(encoded_dataset, key=len))
+    return list(map(lambda sequence_of_char : padding_to_distance(sequence_of_char,lenght_of_longest_sequence,padding_index), encoded_dataset))
 
 
 def padding_to_distance(sequence_of_char :list[str], length_of_longest_sequence :int, padding_symbol : int):
     distance_to_longest = length_of_longest_sequence - len(sequence_of_char)
     return sequence_of_char + [padding_symbol for _ in range(distance_to_longest)]
-
-def get_clean_string_dataset():
-    dataset_sample = load_dataset()
-    cleaned_dataset_sample = clean_dataset(dataset_sample)
-    output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
-    input_sentence_dataset = make_input_dataset(output_sentence_dataset)
-    return input_sentence_dataset,output_sentence_dataset
-
-def transform_data_to_token(): 
-    output_sentence_dataset ,input_sentence_dataset = get_clean_string_dataset()
-    input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
-    output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
-    char_dictionary = create_char_dictionary(output_sequence_of_chars_dataset)
-    encoding_object = IndexTranslator(char_dictionary)
-
-    return create_regular_ML_dataset(input_sequence_of_chars_dataset,encoding_object), create_regular_ML_dataset(output_sequence_of_chars_dataset,encoding_object)
 

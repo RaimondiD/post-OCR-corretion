@@ -6,6 +6,8 @@ import json
 
 DEFAULT_ENCODER_PARAMETER_FILE = "pytorch_encoder_parameters.json"
 DEVICE = 'cpu'
+
+
 def get_dataset():
     input,output = transform_data_to_token()
     train_input, train_output, test_input, test_output = train_test_split(input,output)
@@ -15,10 +17,12 @@ def get_dataset():
     test_output_tensor = torch.tensor(test_output, dtype = torch.int)
     return train_input_tensor, train_output_tensor, test_input_tensor, test_output_tensor
 
+
 class InternalDataRepresentation():
     @abstractmethod
-    def get_data_representation(self,source:torch.tensor):
+    def get_data_representation(self, source:torch.tensor):
         pass
+
     @abstractmethod 
     def get_data_representation_size(self) -> int:
         pass
@@ -43,15 +47,21 @@ class EmbeddingRepresentation(InternalDataRepresentation):
                                                        embedding_data_dimension, 
                                                        self.padding_symbol_index, 
                                                        device= DEVICE)
+        self.embedding_position_models = {}   #the position embedded depend on the dimension of the data passed to it, in this
+                                             #case input and output data can have different dimension, so we use a dict to save
+                                             #the positional embedding associated with every position, we manage it with the
+                                             #method _get_embedded_position_model
     
     def get_data_representation_size(self) -> int:
         return self.embedding_data_dimension + self.embedding_position_dimension
-    
+
     def get_data_original_size(self) -> int:
         return self.dictionary_size
-    
+
     def get_data_representation(self, source: torch.tensor):
         source_embedding = self.data_embedding_model(source)
+        position_embedding = self.__encoding_position(source)
+        return self.dropout_model(source_embedding + position_embedding)
 
     def __encoding_position(self, source: torch.tensor) -> torch.tensor:
         source_data_dimension, number_of_source_data = source.size()   
@@ -62,12 +72,15 @@ class EmbeddingRepresentation(InternalDataRepresentation):
             .transpose(0,1)     #transpose the matrix, now we have for each source data a tensor with all the index of position
             .to(DEVICE)
         )
-        embedding_position_model = torch.nn.Embedding(source_data_dimension,
+        embedding_position_model = self.__get_embedding_position_model(source_data_dimension)
+        return embedding_position_model(tensor_with_position)
+    
+    def __get_embedding_position_model(self,source_data_dimension):        
+        if( not self.embedding_position_models.get(source_data_dimension)):
+            self.embedding_position_models[source_data_dimension] = torch.nn.Embedding(source_data_dimension,
                                                       self.embedding_position_dimension,
                                                       device = DEVICE)
-        return embedding_position_model(tensor_with_position)
-
-
+            
 
 class PytorchTransformerArguments():
     def __init__(self, encoder_parameters_file_path =DEFAULT_ENCODER_PARAMETER_FILE):
@@ -77,7 +90,6 @@ class PytorchTransformerArguments():
     def  get_arguments(self,number_of_input_features = 512 ) -> dict:
         self.parameters_dict['d_model'] = number_of_input_features
         return self.parameters_dict
-
 
 
 
