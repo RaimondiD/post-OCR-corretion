@@ -26,7 +26,7 @@ class IndexTranslator():
     def sequence_from_encode(self, encoded_sequence :list[int]) -> list[str]:
         return [self.index_char_dictionary[index] for index in encoded_sequence]
     
-    def __create_char_dictionary(dataset : list [list[str]]):
+    def __create_char_dictionary(self,dataset : list [list[str]]):
         set_of_char = set([START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL,DEFAULT_PADDING_SYMBOL])
         for sequence in dataset:
             set_of_char = set_of_char.union(sequence)
@@ -34,13 +34,13 @@ class IndexTranslator():
         return char_dictionary
     
     def get_padding_index(self) -> int:
-        return self.char_index_dictionary(DEFAULT_PADDING_SYMBOL)
+        return self.char_index_dictionary[DEFAULT_PADDING_SYMBOL]
     
     def get_vocabolary_dimension(self) -> int:
         return len(self.char_index_dictionary)
         
-def transform_data_to_token(): 
-    output_sentence_dataset ,input_sentence_dataset = get_clean_string_dataset()
+def transform_data_to_token(last_index = -1): 
+    input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(last_index = last_index)
     input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
     output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
     encoding_object = IndexTranslator(output_sequence_of_chars_dataset)
@@ -50,8 +50,8 @@ def transform_data_to_token():
         encoding_object)
 
 
-def get_clean_string_dataset():
-    dataset_sample = load_dataset()
+def get_clean_string_dataset(last_index = -1):
+    dataset_sample = load_dataset()[:last_index]
     cleaned_dataset_sample = clean_dataset(dataset_sample)
     output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
     input_sentence_dataset = make_input_dataset(output_sentence_dataset)
@@ -125,7 +125,7 @@ def split_in_middle_space(long_char_sequence : str):
 
 def make_input_dataset(list_of_sequences : list[str]):
         assert(len(max(list_of_sequences, key = len)) <= MAX_SEQUENCE_LEN)
-        remove_separator_symbols_function = substitute_symbol_func_factory(f"{ENCODING_DEFAULT_SEPARATOR_SYMBOL}")
+        remove_separator_symbols_function = substitute_symbol_func_factory(f"{DATASET_WORD_SEPARATOR_SYMBOL}")
         return list(map(remove_separator_symbols_function,list_of_sequences))
 
 def create_regular_ML_dataset(sequence_of_chars_dataset : list[list[str]], encoding_object : IndexTranslator):

@@ -9,8 +9,10 @@ DEVICE = 'cpu'
 
 
 def get_dataset():
-    input,output = transform_data_to_token()
-    train_input, train_output, test_input, test_output = train_test_split(input,output)
+    input, output,_ = transform_data_to_token()
+    print(f"input padded len = {len(input[0])}, output padded len : {len(output[0])}")
+
+    train_input, test_input, train_output, test_output = train_test_split(input,output)
     train_input_tensor = torch.tensor(train_input, dtype = torch.int )
     train_output_tensor = torch.tensor(train_output, dtype = torch.int)
     test_input_tensor = torch.tensor(test_input, dtype = torch.int)
@@ -35,13 +37,12 @@ class InternalDataRepresentation():
 class EmbeddingRepresentation(InternalDataRepresentation):
     def __init__(self,vocab_dictionary : IndexTranslator, 
                  embedding_data_dimension: int, 
-                 embedding_position_dimension:int, 
                  dropout_embedding_percentual : float):
         
         self.padding_symbol_index = vocab_dictionary.get_padding_index()
         self.dictionary_size = vocab_dictionary.get_vocabolary_dimension()
         self.embedding_data_dimension = embedding_data_dimension
-        self.embedding_position_dimension = embedding_position_dimension
+
         self.dropout_model = torch.nn.Dropout(dropout_embedding_percentual)
         self.data_embedding_model = torch.nn.Embedding(self.dictionary_size, 
                                                        embedding_data_dimension, 
@@ -53,7 +54,11 @@ class EmbeddingRepresentation(InternalDataRepresentation):
                                              #method _get_embedded_position_model
     
     def get_data_representation_size(self) -> int:
-        return self.embedding_data_dimension + self.embedding_position_dimension
+        return self.embedding_data_dimension
+    
+    def padding_index(self) -> int:
+        return self.padding_symbol_index
+
 
     def get_data_original_size(self) -> int:
         return self.dictionary_size
@@ -64,7 +69,8 @@ class EmbeddingRepresentation(InternalDataRepresentation):
         return self.dropout_model(source_embedding + position_embedding)
 
     def __encoding_position(self, source: torch.tensor) -> torch.tensor:
-        source_data_dimension, number_of_source_data = source.size()   
+        number_of_source_data, source_data_dimension = source.size()    #we work with a batch of data
+
         tensor_with_position = (
             torch.arange(0, source_data_dimension) #generate a tensor with all the index from 0 to the dimension of data
             .unsqueeze(1)         #create a tensor for all index
@@ -75,12 +81,12 @@ class EmbeddingRepresentation(InternalDataRepresentation):
         embedding_position_model = self.__get_embedding_position_model(source_data_dimension)
         return embedding_position_model(tensor_with_position)
     
-    def __get_embedding_position_model(self,source_data_dimension):        
+    def __get_embedding_position_model(self, source_data_dimension : int):        
         if( not self.embedding_position_models.get(source_data_dimension)):
             self.embedding_position_models[source_data_dimension] = torch.nn.Embedding(source_data_dimension,
-                                                      self.embedding_position_dimension,
+                                                      self.embedding_data_dimension,
                                                       device = DEVICE)
-            
+        return self.embedding_position_models[source_data_dimension]
 
 class PytorchTransformerArguments():
     def __init__(self, encoder_parameters_file_path =DEFAULT_ENCODER_PARAMETER_FILE):
@@ -89,6 +95,8 @@ class PytorchTransformerArguments():
     
     def  get_arguments(self,number_of_input_features = 512 ) -> dict:
         self.parameters_dict['d_model'] = number_of_input_features
+        self.parameters_dict['device']=DEVICE
+        self.parameters_dict['batch_first']= True
         return self.parameters_dict
 
 
@@ -99,14 +107,37 @@ class Transformer(torch.nn.Module):
         self.internal_input_represantion = input_representation_object
         number_of_data_features = input_representation_object.get_data_representation_size()
         number_of_output_features = input_representation_object.get_data_original_size()
-        self.transformers = torch.nn.Transformer(**tranformers_argument.
-                                                 get_arguments(number_of_data_features), device=DEVICE)
+        self.transformer = torch.nn.Transformer(**tranformers_argument.
+                                                 get_arguments(number_of_data_features))
         self.output_linear_layer = torch.nn.Linear(number_of_data_features,number_of_output_features)
 
+    def forward(self, input_sequence : torch.tensor, target_sequence : torch.tensor):
+            input_seq_representation = self.internal_input_represantion.get_data_representation(input_sequence)
+            target_seq_representation = self.internal_input_represantion.get_data_representation(target_sequence)
+            input_padding_mask = self.get_padding_mask(input_sequence)
+            target_padding_mask = self.get_padding_mask(target_sequence)
+            target_position_padding_mask = self.transformer.generate_square_subsequent_mask(target_sequence.size()[1])
+            transformer_output = self.transformer.forward(input_seq_representation, 
+                                     target_seq_representation, 
+                                     src_key_padding_mask = input_padding_mask,
+                                     tgt_key_padding_mask = target_padding_mask,
+                                     tgt_mask = target_position_padding_mask)
+            return self.output_linear_layer(transformer_output)
 
-def test():  
-    dummy_encode = InternalDataRepresentation()
-    a = PytorchTransformerArguments()
-    dummyTransformer = Transformer(dummy_encode,a)
 
-test()
+    def get_padding_mask(self, tokenized_sequence : torch.tensor):
+        padding_index = self.internal_input_represantion.padding_index()
+        padding_data_mask = tokenized_sequence == padding_index  #this create a vector with the results of the comparison
+        return padding_data_mask
+            
+    
+    
+class TrainingTransformer():
+    def __init__(self) -> None:
+        pass
+
+    def train_model(train_input_dataset : torch.tensor, train_output_dataset : torch.tensor):
+        pass
+
+    def evaluate_model(test_input_dataset, test_output_dataset : torch.tensor):
+        pass
