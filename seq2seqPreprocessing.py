@@ -63,8 +63,9 @@ def load_dataset():
     #so the input must be a a text without spaces and the outut the text with the spaces in the correct
     #position. To build this type of dataset i need a dataset with the spaces in the correct position, 
     #so i use the output file."""
-    reference_to_dataset_file = open(TEST_INPUT_FILE, encoding = "utf-8", errors= "ignore")
-    return list(csv.reader(reference_to_dataset_file))  
+    with open(TEST_INPUT_FILE, encoding = "utf-8", errors= "ignore") as reference_to_dataset_file:
+        return list(csv.reader(reference_to_dataset_file))  
+
     
 
 def clean_dataset(dataset:list[str]):
