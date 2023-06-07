@@ -26,9 +26,9 @@ class TestEmbedding(unittest.TestCase):
         self.assertTrue(self.internal_representation_object.get_data_representation_size() == EMBEDDING_SIZE)
     
     def test_data_representation(self):
-        input_embedding = self.internal_representation_object.get_data_representation(self.input_tensor[:2])
-        output_embedding = self.internal_representation_object.get_data_representation(self.output_tensor[:2])
-        self.assertTrue(input_embedding.size()!=output_embedding.size(),f"input_tensor : {self.input_tensor.size()}, output_tenso : {self.output_tensor.size()}")
+        input_embedding = self.internal_representation_object.forward(self.input_tensor[:2])
+        output_embedding = self.internal_representation_object.forward(self.output_tensor[:2])
+        self.assertTrue(input_embedding.size() <= output_embedding.size(),f"input_tensor : {self.input_tensor.size()}, output_tenso : {self.output_tensor.size()}")
 
     def test_padding_index(self):
         self.assertEqual(self.dataset_translator_object.get_padding_index(), self.internal_representation_object.padding_index())

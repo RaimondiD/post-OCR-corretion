@@ -9,7 +9,7 @@ DATASET_DIRCECTORY = Path("dataset")
 TEST_INPUT_FILE = Path(DATASET_DIRCECTORY,"train_output.csv") 
 ENCODING_DEFAULT_SEPARATOR_SYMBOL = "#"
 DATASET_WORD_SEPARATOR_SYMBOL = ' '
-MAX_SEQUENCE_LEN = 120
+MAX_SEQUENCE_LEN = 32
 END_OF_SENTENCE_SYMBOL = "EOS"  
 START_OF_SENTENCE_SYMBOL = "SOS"
 DEFAULT_PADDING_SYMBOL = "PAD"
@@ -19,7 +19,7 @@ class IndexTranslator():
     def __init__(self, dataset : list [list[str]]) -> None:
         self.index_char_dictionary = self.__create_char_dictionary(dataset)
         self.char_index_dictionary = {char:index for index,char in self.index_char_dictionary.items()}
-    
+
     def encode_sequence(self, sentence_as_a_sequence :list[str]) -> list[str]:
         return [self.char_index_dictionary[char] for char in sentence_as_a_sequence]
     
@@ -30,7 +30,8 @@ class IndexTranslator():
         set_of_char = set([START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL,DEFAULT_PADDING_SYMBOL])
         for sequence in dataset:
             set_of_char = set_of_char.union(sequence)
-        char_dictionary = {index : char for index,char in enumerate(set_of_char)}
+        sorted_character_set = sorted(list(set_of_char))
+        char_dictionary = {index : char for index,char in enumerate(sorted_character_set)}
         return char_dictionary
     
     def get_padding_index(self) -> int:
@@ -38,6 +39,9 @@ class IndexTranslator():
     
     def get_vocabolary_dimension(self) -> int:
         return len(self.char_index_dictionary)
+    
+    def get_max_length(self) -> int:
+        return MAX_SEQUENCE_LEN + 2
         
 def transform_data_to_token(last_index = -1): 
     input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(last_index = last_index)
