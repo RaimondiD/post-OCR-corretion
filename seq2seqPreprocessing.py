@@ -10,13 +10,16 @@ TEST_INPUT_FILE = Path(DATASET_DIRCECTORY,"train_output.csv")
 ENCODING_DEFAULT_SEPARATOR_SYMBOL = "#"
 DATASET_WORD_SEPARATOR_SYMBOL = ' '
 MAX_SEQUENCE_LEN = 32
-END_OF_SENTENCE_SYMBOL = "EOS"  
-START_OF_SENTENCE_SYMBOL = "SOS"
-DEFAULT_PADDING_SYMBOL = "PAD"
+DEFAULT_UNKNOW_SYMBOL = "<unk>"
+END_OF_SENTENCE_SYMBOL = '<eos>'  
+START_OF_SENTENCE_SYMBOL = '<bos>'
+DEFAULT_PADDING_SYMBOL = '<pad>'
+
 
 class IndexTranslator():
     
     def __init__(self, dataset : list [list[str]]) -> None:
+        self.special_symbol = [DEFAULT_UNKNOW_SYMBOL,DEFAULT_PADDING_SYMBOL,START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL]
         self.index_char_dictionary = self.__create_char_dictionary(dataset)
         self.char_index_dictionary = {char:index for index,char in self.index_char_dictionary.items()}
 
@@ -24,14 +27,23 @@ class IndexTranslator():
         return [self.char_index_dictionary[char] for char in sentence_as_a_sequence]
     
     def sequence_from_encode(self, encoded_sequence :list[int]) -> list[str]:
-        return [self.index_char_dictionary[index] for index in encoded_sequence]
+        sequence_in_natural_language = [self.index_char_dictionary[index] for index in encoded_sequence]
+        trunked_sequence_in_natural_language = self._remove_character_after_eos(sequence_in_natural_language)
+        sequence_without_special_symbol = [character for character in trunked_sequence_in_natural_language 
+                                           if character not in self.special_symbol]
+        return sequence_without_special_symbol
+    
+    def _remove_character_after_eos(self, natural_language_sequence : list[str]):
+        index_of_EOS = "".join(natural_language_sequence).find(END_OF_SENTENCE_SYMBOL)
+        return natural_language_sequence[:index_of_EOS]
+        
     
     def __create_char_dictionary(self,dataset : list [list[str]]):
-        set_of_char = set([START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL,DEFAULT_PADDING_SYMBOL])
+        set_of_char = set()
         for sequence in dataset:
             set_of_char = set_of_char.union(sequence)
         sorted_character_set = sorted(list(set_of_char))
-        char_dictionary = {index : char for index,char in enumerate(sorted_character_set)}
+        char_dictionary = {index : char for index,char in enumerate(self.special_symbol + sorted_character_set)}  #we want that special symbol have the first position
         return char_dictionary
     
     def get_padding_index(self) -> int:
@@ -90,7 +102,7 @@ def substitute_symbol_func_factory(regex_of_target:str,substitute = ""):
 def sentence_as_a_list_of_chars(dataset:list[str]):
     substitute_space_function = substitute_symbol_func_factory(r"[ ]",ENCODING_DEFAULT_SEPARATOR_SYMBOL)
     dataset_whit_new_symbol_for_space = map(substitute_space_function, dataset)
-    return [[START_OF_SENTENCE_SYMBOL]+[char for char in sentence]+[END_OF_SENTENCE_SYMBOL] for sentence in dataset_whit_new_symbol_for_space]                                                    
+    return [[char for char in sentence] for sentence in dataset_whit_new_symbol_for_space]                                                    
 
 def embed_chars_in_spaces(target_string:str):
     substitution_func = lambda char : f" {char} "
@@ -134,13 +146,18 @@ def make_input_dataset(list_of_sequences : list[str]):
         return list(map(remove_separator_symbols_function,list_of_sequences))
 
 def create_regular_ML_dataset(sequence_of_chars_dataset : list[list[str]], encoding_object : IndexTranslator):
-    encoded_dataset = [encoding_object.encode_sequence(sequence) for sequence in sequence_of_chars_dataset]
-    padding_index = encoding_object.get_padding_index()
-    lenght_of_longest_sequence = len(max(encoded_dataset, key=len))
-    return list(map(lambda sequence_of_char : padding_to_distance(sequence_of_char,lenght_of_longest_sequence,padding_index), encoded_dataset))
+    bos_and_eos_dataset = [[START_OF_SENTENCE_SYMBOL] + sentence + [END_OF_SENTENCE_SYMBOL] for sentence in sequence_of_chars_dataset]
+    padded_dataset = create_padding_dataset(bos_and_eos_dataset)
+    encoded_dataset = [encoding_object.encode_sequence(sequence) for sequence in padded_dataset]
+    return encoded_dataset
 
+def create_padding_dataset(sequence_of_chars_dataset : list[list[str]]) -> list[list[str]]:
+    lenght_of_longest_sequence = len(max(sequence_of_chars_dataset, key=len))
+    return list(map(
+        lambda sequence_of_char : padding_to_distance(sequence_of_char, lenght_of_longest_sequence), 
+        sequence_of_chars_dataset) )
 
-def padding_to_distance(sequence_of_char :list[str], length_of_longest_sequence :int, padding_symbol : int):
+def padding_to_distance(sequence_of_char :list[str], length_of_longest_sequence :int):
     distance_to_longest = length_of_longest_sequence - len(sequence_of_char)
-    return sequence_of_char + [padding_symbol for _ in range(distance_to_longest)]
+    return sequence_of_char + [DEFAULT_PADDING_SYMBOL] * distance_to_longest
 
