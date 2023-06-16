@@ -1,10 +1,11 @@
-import seq2esqTraining
+import seq2seqTraining
 import seq2seqLearning 
 import seq2seqEvaluation
 import trainTestSplitter
 import torch
 import random
 RANDOM_SEED = 12062022
+DIMENSION_OF_SAMPLE = 3
 torch.manual_seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
 
@@ -12,9 +13,9 @@ def train_object(dataset_manager : seq2seqLearning.ManageDataset, criterion, dro
     translator_object = dataset_manager.get_translatorObject()
     pytorch_transformers_argument = seq2seqLearning.PytorchTransformerArguments()
     inner_input_representation_model = seq2seqLearning.EmbeddingRepresentation(translator_object, embedding_size, dropout_value) #substitute with the desired encoding, (one hot, Embedding, concatEmbedding)
-    training_hyperparameter = seq2esqTraining.TrainingTransformerHyperparameters()
+    training_hyperparameter = seq2seqTraining.TrainingTransformerHyperparameters()
     model = seq2seqLearning.Transformer(inner_input_representation_model,pytorch_transformers_argument)
-    training_object = seq2esqTraining.TrainTransformer(**training_hyperparameter.get_arguments(model, criterion))
+    training_object = seq2seqTraining.TrainTransformer(**training_hyperparameter.get_arguments(model, criterion))
     return training_object.train_model(dataset_manager.get_train_dataset())
     
 
@@ -27,7 +28,7 @@ def evalute_model(dataset_manager : seq2seqLearning.ManageDataset, criterion, mo
     print(test_object.get_levenshtein_similarity())
     
 train_test_splitter = trainTestSplitter.TrainTestSplitter()
-dataset_manager = seq2seqLearning.ManageDataset(3)
+dataset_manager = seq2seqLearning.ManageDataset(DIMENSION_OF_SAMPLE)
 padding_index = dataset_manager.get_translatorObject().get_padding_index()
 criterion = torch.nn.CrossEntropyLoss(ignore_index = padding_index)    
 model = train_object(dataset_manager, criterion)

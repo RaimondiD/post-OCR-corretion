@@ -2,6 +2,7 @@ import unittest
 import seq2seqLearning
 from seq2seqPreprocessing import transform_data_to_token
 import main
+import BERTpreprocessing
 import torch
 
 DIMENSION_OF_SAMPLE = -1
@@ -85,6 +86,19 @@ class testTrainingAndTest(unittest.TestCase):
         model = main.train_object(self.dataset_manager, self.criterion)
         batch_size = 32
         main.evalute_model(self.dataset_manager, self.criterion, model, batch_size)
+        
+
+
+class testBertPreprocessing(unittest.TestCase):
+    
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+
+    def get_clean_dataet(self):
+        ds = BERTpreprocessing.get_clean_dataset(BERTpreprocessing.INPUT_DATASET_PATH)
+        self.assertEqual(1,0)
+        print(ds)
+        
     
 if __name__ == '__main__':
     unittest.main()
