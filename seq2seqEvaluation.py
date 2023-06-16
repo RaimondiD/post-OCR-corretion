@@ -54,8 +54,6 @@ class Sequence2SequenceEvaluator(TrainTestTransformer):
                 input_model_data, target_data = self.move_batch_to_device(batch_input, batch_target)
                 output_of_model = self.feed_model(input_model_data, target_data)
                 output_for_loss, target_for_loss = self.reshape_for_loss_function(output_of_model, target_data)
-                output_for_batch = self._get_sequence_from_model_output(output_for_loss)
-
                 loss = self.criterion(output_for_loss, target_for_loss)
                 total_loss += loss.item()
         return total_loss / len(list(test_iterator_object))        

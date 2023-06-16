@@ -6,6 +6,7 @@ import torch
 import json
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.functional import one_hot, log_softmax
+import trainTestSplitter
 
 ENCODER_PARAMETER_DEFAULT_PATH = pathlib.Path("pytorch_encoder_parameters.json")
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -25,7 +26,8 @@ class Seq2SeqDataset(Dataset):
 
 class ManageDataset():
     def __init__(self, last_index=-1):
-        input_sequence_data, output_sequence_data, self.translatorObject = transform_data_to_token(last_index)
+        train_test_splitter = trainTestSplitter.TrainTestSplitter()
+        input_sequence_data, output_sequence_data, self.translatorObject = transform_data_to_token(train_test_splitter,last_index)
         self.train_input, self.test_input, self.train_output, self.test_output = \
             train_test_split(input_sequence_data,output_sequence_data,random_state = SEED)
 
