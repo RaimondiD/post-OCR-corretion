@@ -120,8 +120,3 @@ class DatasetTokenizer():
     def get_data_collator(self):
         return self.data_collator 
     
-trainTestSplitter = TrainTestSplitter()
-datasetPreprocessor = DatasetPreprocessor(trainTestSplitter)
-dataset_dict = datasetPreprocessor.get_dataset_dict()
-tokenizer = DatasetTokenizer()
-tokenizer.tokenize_dataset(dataset_dict['train'])
