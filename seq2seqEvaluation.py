@@ -16,11 +16,11 @@ class Sequence2SequenceEvaluator(TrainTestTransformer):
         self.test_input_sentence, self.test_target_sentence = test_sequences
         self.translator_object = translator_object
 
-    def get_levenshtein_similarity(self):
+    def get_levenshtein_similarity(self) -> str:
         natural_language_output_sequence, natural_language_target_sequence = self.get_output_of_model()
         avg_levrnshtein_distance_rate = avg_levenshtein_ratio(natural_language_output_sequence, 
                                                             natural_language_target_sequence)
-        print(f"the test dataset have an average levenshtein distance rate of {avg_levrnshtein_distance_rate}")
+        return (f"the test dataset have an average levenshtein distance rate of {avg_levrnshtein_distance_rate}")
         
         
     def get_output_of_model(self):

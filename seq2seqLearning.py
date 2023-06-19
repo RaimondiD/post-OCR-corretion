@@ -1,9 +1,9 @@
 from seq2seqPreprocessing import transform_data_to_token,IndexTranslator
+from modelArgumentManagement import ArgumentFromJson
 from abc import abstractmethod
 from sklearn.model_selection import train_test_split
 import pathlib
 import torch
-import json
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.functional import one_hot, log_softmax
 import trainTestSplitter
@@ -180,10 +180,6 @@ class EmbeddingRepresentetionConcat(EmbeddingRepresentation):
     def get_data_representation_size(self) -> int:
         return self.embedding_data_dimension * 2
     
-class ArgumentFromJson : 
-    def __init__(self, parameters_file_path : str):
-        with open(parameters_file_path,"r") as arguments_file:
-            self.parameters_dict = json.load(arguments_file) 
 
 class PytorchTransformerArguments(ArgumentFromJson):
     def __init__(self, encoder_parameters_file_path = ENCODER_PARAMETER_DEFAULT_PATH):

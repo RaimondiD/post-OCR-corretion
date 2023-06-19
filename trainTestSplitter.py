@@ -27,9 +27,9 @@ class TrainTestSplitter():
     def get_seq2seq_dataset(self)-> list[str]:
         return self.test_input_dataset[DATA_LABEL_INPUT_DATASET]
 
-    def get_BERT_train_dataset(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
+    def get_BERT_train_data(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
         return self.train_input_dataset,  self.train_output_dataset
     
-    def get_BERT_test_dataset(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
+    def get_BERT_test_data(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
         return self.test_input_dataset, self.test_output_dataset
     

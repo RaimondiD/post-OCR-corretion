@@ -80,12 +80,12 @@ class testTrainingAndTest(unittest.TestCase):
         unittest.TestCase.__init__(self,*args,**kwargs)        
     
     def test_training(self):
-        main.train_object(self.dataset_manager, self.criterion)
+        main.train_seq2seq(self.dataset_manager, self.criterion)
 
     def test_testing(self):
-        model = main.train_object(self.dataset_manager, self.criterion)
+        model = main.train_seq2seq(self.dataset_manager, self.criterion)
         batch_size = 32
-        main.evalute_model(self.dataset_manager, self.criterion, model, batch_size)
+        main.evalute_seq2seq(self.dataset_manager, self.criterion, model, batch_size)
         
 
 

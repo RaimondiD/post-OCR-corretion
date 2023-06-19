@@ -1,4 +1,5 @@
-from  seq2seqLearning import TrainTestTransformer, Transformer, ArgumentFromJson
+from  seq2seqLearning import TrainTestTransformer, Transformer
+from modelArgumentManagement import ArgumentFromJson
 import os
 import pathlib
 from torch.utils.tensorboard import SummaryWriter

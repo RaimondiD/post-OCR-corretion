@@ -58,8 +58,8 @@ class IndexTranslator():
     def get_max_length(self) -> int:
         return MAX_SEQUENCE_LEN + 2
         
-def transform_data_to_token(dataset_object : trainTestSplitter.TrainTestSplitter, last_index = -1): 
-    input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(dataset_object, last_index)
+def transform_data_to_token(dataset_object : trainTestSplitter.TrainTestSplitter, dimension_of_dataset = -1):    #when dimension_of_dataset is equal to -1 we use the whole data
+    input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(dataset_object, dimension_of_dataset)
     input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
     output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
     encoding_object = IndexTranslator(output_sequence_of_chars_dataset)
