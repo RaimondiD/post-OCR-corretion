@@ -4,8 +4,12 @@ from seq2seqPreprocessing import transform_data_to_token
 import main
 import BERTpreprocessing
 import torch
+import correctionSentences
+from trainTestSplitter import TrainTestSplitter
+import BERTEvaluator
 
-DIMENSION_OF_SAMPLE = -1
+
+DIMENSION_OF_SAMPLE = 3
 DROPOUT_RATE = 0.1
 EMBEDDING_SIZE = 32
 
@@ -90,14 +94,56 @@ class testTrainingAndTest(unittest.TestCase):
 
 
 class testBertPreprocessing(unittest.TestCase):
-    
     def __init__(self, methodName: str = "runTest") -> None:
         super().__init__(methodName)
 
-    def get_clean_dataet(self):
+    def get_clean_dataset(self):
         ds = BERTpreprocessing.get_clean_dataset(BERTpreprocessing.INPUT_DATASET_PATH)
         self.assertEqual(1,0)
         print(ds)
+    
+class testBert(unittest.TestCase):
+    def __init__(self, methodName: str = "runTest") -> None:
+        super().__init__(methodName)
+    
+    def test_train_bert(self):
+        main.train_fine_tuned_BERT()
+        
+    def test_levenshtein_on_token(self):
+        main.test_levensthein_token()
+        
+class testCorrectionModule(unittest.TestCase):
+    def test_roulette_wheel(self):
+        value = [(10, 1), (20, 2), (30, 2), (40, 4), (50, 5), (60, 4), (70, 3), (80, 2), (90, 2)]
+        metric = lambda tuple : tuple[1]
+        number_of_extracted = 5
+        roulette = correctionSentences.RouletteWheel(number_of_extracted, value, metric)
+        print(roulette.extract_individuals())
+        
+    def test_get_alternative_words(self):
+        dataset = TrainTestSplitter(64).get_dictionary_data()
+        dictionary = correctionSentences.Dictionary(dataset)
+        prhase_evaluator = correctionSentences.PhraseEvaluator(BERTEvaluator.BERTEvaluator(),correctionSentences.EvolutionaryParameters())
+        text = "the dis0ric! is in the cit.".split()
+        bert_model = BERTEvaluator.BERTEvaluator()
+        error = bert_model.get_wrong_indexes(text)
+        phrase = correctionSentences.Phrase(text,prhase_evaluator)
+        print([new_phrase.text for new_phrase in phrase.get_alternative(error[0],dictionary)])        
+
+    def test_correction_word(self):
+        text = "the dis0ric! is in the cit."
+        dataset = TrainTestSplitter(64).get_dictionary_data()
+        dictionary = correctionSentences.Dictionary(dataset)
+        print(correctionSentences.phrase_correction(text,dictionary).get_text())
+        
+class testBertEvaluator(unittest.TestCase):
+    def test_bert_evaluator(self):
+        phrase = "the dis0ric! is in the cit.".split()
+        bert_model = BERTEvaluator.BERTEvaluator()
+        print(bert_model.evalate_phrase(phrase))
+        print(bert_model.get_wrong_indexes(phrase))
+        print(bert_model.get_score(phrase))
+                        
         
     
 if __name__ == '__main__':

@@ -21,7 +21,7 @@ class DatasetPreprocessor():
         dict_dataset = {"train" : train_dataset, "test" : test_dataset}
         return dict_dataset
     
-    def _get_dataset(data_tuple):
+    def _get_dataset(data_tuple) -> Dataset:
         input_data, output_data = data_tuple         
         input_clean_dataset = DatasetPreprocessor._clean_dataset(input_data)
         output_clean_dataset = DatasetPreprocessor._clean_dataset(output_data)

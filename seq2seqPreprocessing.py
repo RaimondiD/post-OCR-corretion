@@ -85,7 +85,8 @@ def load_dataset(file = TEST_INPUT_FILE) -> list[str]:
 def clean_dataset(dataset:list[str]):
     remove_backslash_func = substitute_symbol_func_factory(r"[\\]")
     dataset_without_backslash = list(map(remove_backslash_func,dataset))
-    return dataset_without_backslash
+    
+    return list(map(lambda sentence : sentence.lower(),dataset_without_backslash))
 
 def substitute_symbol_func_factory(regex_of_target:str,substitute = ""):
     def substitute_specific_symbol(target_string):

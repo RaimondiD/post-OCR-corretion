@@ -4,6 +4,7 @@ import seq2seqEvaluation
 import BERTFineTuning
 import trainTestSplitter
 import BERTpreprocessing
+import correctionSentences
 import torch
 import random
 RANDOM_SEED = 12062022
@@ -40,12 +41,29 @@ def evalute_seq2seq(dataset_manager : seq2seqLearning.ManageDataset, criterion, 
     
     
 def train_fine_tuned_BERT():
-    dataset_object = trainTestSplitter.TrainTestSplitter()
+    dataset_object = trainTestSplitter.TrainTestSplitter(-1)
     train_test_dataset = BERTpreprocessing.DatasetPreprocessor(dataset_object)
     tokenization_object = BERTpreprocessing.DatasetTokenizer()
     evaluation_function = BERTFineTuning.EvaluationManager().get_metrics()
     trainingObject = BERTFineTuning.FineTuningBERTTrainer(tokenization_object, train_test_dataset, evaluation_function)
     trainingObject.train_model()
-    
 #train_and_evaluateSeq2seQ(DEFAULT_BATCH_SIZE,DIMENSION_OF_SAMPLE)   #istruction to run and evaluate seq2seqmodel
-train_fine_tuned_BERT()
+
+def get_dictionary(train_test_object : trainTestSplitter.TrainTestSplitter):
+    dictionary_input = train_test_object.get_dictionary_data()
+    dictionary = correctionSentences.Dictionary(dictionary_input)
+    return dictionary
+
+def test_levensthein_token():
+    dataset = trainTestSplitter.TrainTestSplitter(32)
+    dictionary = get_dictionary(dataset)
+    example = correctionSentences.WordPattern("hello")
+    print(example.get_1_levensthein_distance_words(dictionary))
+    example = correctionSentences.WordPattern("drought")
+    print(example.get_1_levensthein_distance_words(dictionary))
+
+
+def correct_sentences(self):
+    dataset_object = trainTestSplitter.TrainTestSplitter()
+    dataset_manager = dataset_manager(dataset_object.get_seq2seq_dataset())
+    trained_model = train_seq2seq(dataset_manager)

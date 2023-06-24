@@ -20,6 +20,10 @@ parts/
 sdist/
 var/
 dataset/
+models/
+.metals/
+.vscode/
+test*
 wheels/
 share/python-wheels/
 *.egg-info/
@@ -144,7 +148,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore

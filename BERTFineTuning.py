@@ -9,22 +9,22 @@ MODEL_DIRECTORY = "models/finetuned_bert"
 
 class EvaluationManager():
     def __init__(self) -> None:
-        self.label_list = [0,1]
+        self.label_list = ["S-0","S-1"]
         self.evaluate_object = evaluate.load('seqeval')
     
     def compute_metrics(self, model_prediction_and_label) -> dict:
         model_predictions, labels = model_prediction_and_label
         value_predictions = np.argmax(model_predictions, axis=2)
 
-        #true_predictions = [
-        #   [p for (p, l) in zip(prediction, label) if l != -100]
-        #  for prediction, label in zip(value_predictions, labels)
-        #]
-        #true_labels = [
-        #   [self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
-        #  for prediction, label in zip(model_predictions, labels)
-        #]
-        results = self.evaluate_object.compute(predictions= value_predictions, references= labels)
+        true_predictions = [
+           [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+         for prediction, label in zip(value_predictions, labels)
+        ]
+        true_labels = [
+           [self.label_list[l] for (_, l) in zip(prediction, label) if l != -100]
+          for prediction, label in zip(model_predictions, labels)
+        ]
+        results = self.evaluate_object.compute(predictions= true_predictions, references= true_labels)
         return results
     
     def get_metrics(self):
@@ -47,7 +47,16 @@ class FineTuningBERTTrainer():
         self.tokenizer = tokenization_object.tokenizer
         self.data_collator = tokenization_object.get_data_collator()
         train_argument = BertArgumentFromJson().get_argument(MODEL_DIRECTORY)
-        self.model = AutoModelForTokenClassification.from_pretrained("distilbert-base-uncased", num_labels=2)
+        id2label = {
+                0: "S-0", 
+                1: "S-1"
+        }
+        label2id = {
+                "S-0": 0,
+                "S-1": 1
+        }
+        self.model = AutoModelForTokenClassification.from_pretrained("distilbert-base-uncased", num_labels=2, 
+                                                                     id2label=id2label, label2id=label2id)
         self.training_arguments = TrainingArguments(**train_argument)
         self.evaluation_function = evaluation_function
     
