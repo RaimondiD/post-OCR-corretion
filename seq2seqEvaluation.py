@@ -19,7 +19,7 @@ class Sequence2SequenceEvaluator(TrainTestTransformer):
     def get_levenshtein_similarity(self) -> str:
         natural_language_output_sequence, natural_language_target_sequence = self.get_output_of_model()
         avg_levrnshtein_distance_rate = avg_levenshtein_ratio(natural_language_output_sequence, 
-                                                            natural_language_target_sequence)
+                                                            natural_language_target_sequence, convert_list_to_string)
         return (f"the test dataset have an average levenshtein distance rate of {avg_levrnshtein_distance_rate}")
         
         
@@ -59,16 +59,16 @@ class Sequence2SequenceEvaluator(TrainTestTransformer):
         return total_loss / len(list(test_iterator_object))        
 
 
-def avg_levenshtein_ratio(model_output_encoded_sequences : list[list[str]], target_encoded_sequences : list[list[str]]) -> float:
+def avg_levenshtein_ratio(produced_sequences : list[list[str]] | list[str], correct_sequences : list[list[str]] | list[str], 
+                          sequence_to_phrase = lambda string :str.lower(string)) -> float:
     sum_of_levensthein_ratio = 0
-    number_of_sequences = len(model_output_encoded_sequences)
+    number_of_sequences = len(produced_sequences)
     
-    for model_sequence, target_encoded_sequence in zip(model_output_encoded_sequences, target_encoded_sequences):
-        sum_of_levensthein_ratio += Levenshtein.ratio(model_sequence, target_encoded_sequence, processor = convert_list_to_string)
-    
+    for model_sequence, target_encoded_sequence in zip(produced_sequences, correct_sequences):
+        sum_of_levensthein_ratio += Levenshtein.ratio(model_sequence, target_encoded_sequence, processor = sequence_to_phrase)
     return sum_of_levensthein_ratio / number_of_sequences
         
-def convert_list_to_string(sequence_of_char : list[str]) -> str :
+def convert_list_to_string(sequence_of_char : list[list[str]]) -> str :
     string_of_char = "".join(sequence_of_char)
     return string_of_char
 

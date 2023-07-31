@@ -123,26 +123,27 @@ class testCorrectionModule(unittest.TestCase):
     def test_get_alternative_words(self):
         dataset = TrainTestSplitter(64).get_dictionary_data()
         dictionary = correctionSentences.Dictionary(dataset)
-        prhase_evaluator = correctionSentences.PhraseEvaluator(BERTEvaluator.BERTEvaluator(),correctionSentences.EvolutionaryParameters())
+        sentence_evaluator = correctionSentences.SentenceEvaluator(BERTEvaluator.BERTEvaluator(),correctionSentences.EvolutionaryParameters())
         text = "the dis0ric! is in the cit.".split()
         bert_model = BERTEvaluator.BERTEvaluator()
         error = bert_model.get_wrong_indexes(text)
-        phrase = correctionSentences.Phrase(text,prhase_evaluator)
-        print([new_phrase.text for new_phrase in phrase.get_alternative(error[0],dictionary)])        
+        sentence = correctionSentences.Sentence(text,sentence_evaluator)
+        print([new_sentence.text for new_sentence in sentence.get_alternative(error[0],dictionary)])        
 
     def test_correction_word(self):
         text = "the dis0ric! is in the cit."
-        dataset = TrainTestSplitter(64).get_dictionary_data()
+        dataset_manager = TrainTestSplitter(64)
+        dataset = dataset_manager.get_dictionary_data()
         dictionary = correctionSentences.Dictionary(dataset)
-        print(correctionSentences.phrase_correction(text,dictionary).get_text())
+        print(correctionSentences.sentence_correction(text,dictionary).get_text())
         
 class testBertEvaluator(unittest.TestCase):
     def test_bert_evaluator(self):
-        phrase = "the dis0ric! is in the cit.".split()
+        sentence = "the dis0ric! is in the cit.".split()
         bert_model = BERTEvaluator.BERTEvaluator()
-        print(bert_model.evalate_phrase(phrase))
-        print(bert_model.get_wrong_indexes(phrase))
-        print(bert_model.get_score(phrase))
+        print(bert_model.evalate_sentence(sentence))
+        print(bert_model.get_wrong_indexes(sentence))
+        print(bert_model.get_score(sentence))
                         
         
     

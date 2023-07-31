@@ -25,12 +25,10 @@ class Seq2SeqDataset(Dataset):
         return self.input_sequence[index], self.target_sequence[index]
 
 class ManageDataset():
-    def __init__(self, last_index=-1):
-        train_test_splitter = trainTestSplitter.TrainTestSplitter()
-        input_sequence_data, output_sequence_data, self.translatorObject = transform_data_to_token(train_test_splitter,last_index)
-        self.train_input, self.test_input, self.train_output, self.test_output = \
-            train_test_split(input_sequence_data,output_sequence_data,random_state = SEED)
-
+    def __init__(self, seq2seq_train_dataset : list[str], seq2seq_test_dataset):
+        self.train_input, self.train_output, self.translatorObject = transform_data_to_token(seq2seq_train_dataset)
+        self.test_input, self.test_output, _  = transform_data_to_token(seq2seq_test_dataset, self.translatorObject)
+    
     def get_translatorObject(self) -> IndexTranslator:
         return self.translatorObject
     
@@ -40,10 +38,10 @@ class ManageDataset():
     def get_output(self) -> list[list[str]]:
         return self.train_output + self.test_output
     
-    def get_train_dataset(self) -> list[list[str]]:
+    def get_train_dataset(self) -> tuple[list[list[str], list[list[str]]]]:
         return self.train_input, self.train_output
     
-    def get_test_dataset(self) -> list[list[str]] :
+    def get_test_dataset(self) -> tuple[list[list[str]], list[list[str]]] :
         return self.test_input, self.test_output
     
     def get_tensor_representation(self)  -> tuple[torch.Tensor]:

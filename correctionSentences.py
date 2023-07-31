@@ -10,6 +10,7 @@ import random
 from collections  import defaultdict
 from datasets.utils.logging import disable_progress_bar, enable_progress_bar
 from BERTEvaluator import BERTEvaluator
+from seq2seqEvaluation import avg_levenshtein_ratio
 
 from datasets import Dataset
 PROBABILITY_OF_OPERATION = {
@@ -19,8 +20,8 @@ PROBABILITY_OF_OPERATION = {
 }
 #nltk.download('words') at the first execution download the packa
 
-REGEX_SPECIAL_CHARACTER_MAPPING = [ (r"\?" , "E"), (r"\^" , "S"), (r"\."  , "P"), (r"\\w" , "W"),(r"\\." , "P")]
-SPECIAL_REGEX_CHARACTER_MAPPING = [("E" , r"\?"), ("S" , r"\^"), ("P" , r"\\."), ("W" , r"\\w")]
+REGEX_SPECIAL_CHARACTER_MAPPING = [ (r"\?" , "E"), (r"\^" , "S"), (r"\."  , "P"), (r"\\w" , "W"), (r"\\." , "P"), (r"\[" , "Q"), (r"\*", "A"), (r"\(", "T")]
+SPECIAL_REGEX_CHARACTER_MAPPING = [ ("E" , r"\?"), ("S" , r"\^"), ("P" , r"\\."), ("W" , r"\\w"), ("Q", r"\["), ("A", r"\*"), ("T", r"\(") ]
 EVOLUTIONARY_ARGUMENT_PATH = "evolutionary_argument.json"
     
 class Dictionary():
@@ -30,9 +31,9 @@ class Dictionary():
         #self.set_of_word = get_english_words.union(train_words)
         self.word_datasets = self._get_optimized_dataset(train_words, english_words)
         
-    def _get_train_word(train_phrases : list[str]):
-        clean_train_phrases = seq2seqPreprocessing.clean_dataset(train_phrases)
-        train_words_lists = list(map(lambda prhase : prhase.split(" "), clean_train_phrases))
+    def _get_train_word(train_sentences : list[str]):
+        clean_train_sentences = seq2seqPreprocessing.clean_dataset(train_sentences)
+        train_words_lists = list(map(lambda sentence : sentence.split(" "), clean_train_sentences))
         flattened_word_list = itertools.chain(*train_words_lists)
         words_without_puntaction = map(remove_punctuaction, flattened_word_list)
         lowercase_words  = [word.lower() for word in words_without_puntaction if len(word)!=0]
@@ -54,15 +55,19 @@ class Dictionary():
     def dictionary_matches(self, pattern : str) -> list[str]:
         compiled_pattern = re.compile(r"^" + pattern + r"$") #get the word of the same lenght that match the word
         correct_letters_dataset = self.get_related_datasets(pattern[0])
-        disable_progress_bar()
-        matches_of_all_datasets = [Dictionary._get_dataset_match(dataset, compiled_pattern) for dataset in correct_letters_dataset]
-        enable_progress_bar() #disable and re-enable progress bar
-        return set(itertools.chain(*matches_of_all_datasets))
-
+        if correct_letters_dataset != [[]]:
+            disable_progress_bar()
+            matches_of_all_datasets = [Dictionary._get_dataset_match(dataset, compiled_pattern) for dataset in correct_letters_dataset]
+            enable_progress_bar() #disable and re-enable progress bar
+            return set(itertools.chain(*matches_of_all_datasets))
+        else:
+            return set()
+        
     def get_related_datasets(self, first_pattern_letters : str) -> list[Dataset]:  #i'v created a datasets for each starting letters; here i return only the dataset
-                                                                                   #with the first letters that match with the first letter of the pattern
-        pattern_of_first_letters = f"^{first_pattern_letters}$"
-        dictionary_first_letters = [letter for letter in self.word_datasets if re.match(pattern_of_first_letters, letter) ]
+        if first_pattern_letters == r"\\w":                                                                        #with the first letters that match with the first letter of the pattern
+            dictionary_first_letters = [letter for letter in self.word_datasets]
+        else:
+            dictionary_first_letters = [first_pattern_letters]
         return [self.word_datasets[letter] for letter in dictionary_first_letters]
         
     def _get_dataset_match(targt_dataset : Dataset, pattern : re.compile):
@@ -149,10 +154,10 @@ class EvolutionaryParameters(modelArgumentManagement.ArgumentFromJson):
     def get_number_of_words(self):
         return self.parameters_dict['words_for_generation']
     
-    def get_number_of_phrases(self):
-        return self.parameters_dict['phrases_for_generation']
+    def get_number_of_sentences(self):
+        return self.parameters_dict['sentences_for_generation']
 
-class PhraseEvaluator():
+class SentenceEvaluator():
     def __init__(self, bert_Evaluator : BERTEvaluator, evolutionary_parameters:EvolutionaryParameters) -> None:
         self.bert_evaluator = bert_Evaluator
         self.evolutionary_parameters = evolutionary_parameters
@@ -166,102 +171,118 @@ class PhraseEvaluator():
     def get_number_of_words(self):
         return self.evolutionary_parameters.get_number_of_words()
     
-    def get_number_of_phrases(self):
-        return self.evolutionary_parameters.get_number_of_phrases()
+    def get_number_of_sentences(self):
+        return self.evolutionary_parameters.get_number_of_sentences()
     
-class Phrase():
-    def __init__(self, prhase : list[str], phrase_evaluator : PhraseEvaluator) -> None:
-        self.text = prhase
-        self.phrase_evaluator = phrase_evaluator
+class Sentence():
+    def __init__(self, sentence : list[str], sentence_evaluator : SentenceEvaluator) -> None:
+        self.text = sentence
+        self.sentence_evaluator = sentence_evaluator
 
     def get_text(self):
-        return self.text
+        return "".join(self.text)
 
     def get_score(self):
-        return self.phrase_evaluator.get_score(self.text)
+        return self.sentence_evaluator.get_score(self.text)
     
     def get_error(self) -> list[tuple[str,float]]:
-        return self.phrase_evaluator.bert_evaluator.get_wrong_indexes(self.get_text())
+        return self.sentence_evaluator.bert_evaluator.get_wrong_indexes(self.text)
     
-    def get_alternative(self, error_tuple : tuple[int,str], dictionary : Dictionary) -> list[Phrase]: 
+    def get_alternative(self, error_tuple : tuple[int,str], alternative_words : list[tuple[int,float]]) -> list[Sentence]: 
         index_error, word_error = error_tuple
-        alternative_words = self.get_alternative_word(word_error, dictionary)
-        candidate_phrases = self.get_new_phrases(alternative_words, index_error, word_error)
-        return self.selected_phrases(candidate_phrases)
+        candidate_sentences = self.get_new_sentences(alternative_words, index_error, word_error)
+        return self.selected_sentences(candidate_sentences)
         
-    def get_alternative_word(self, word:str, dictionary : Dictionary) -> list[tuple[str,float]]:
-        word_without_punctation = remove_punctuaction(word)
-        set_of_candidate_pattern = set([WordPattern(word), WordPattern(word_without_punctation)]) #we use set to remove word_without_puncation #
-                                                                                                  #if the word and the word without punctatio are equal
-        candidate_words = set([(word,1), (word_without_punctation,1)])
-        levenshtein_distance = 0
-        while(self._not_enough_generated_word(levenshtein_distance, len(candidate_words), word)):
-            set_of_candidate_pattern = set_of_candidate_pattern.union(Phrase._get_n_lenveshtein_distance(set_of_candidate_pattern))
-            candidate_words = candidate_words.union(Phrase._get_candidate_words(set_of_candidate_pattern, dictionary))
-            levenshtein_distance +=1
-        return candidate_words
+    
     
     def _get_n_lenveshtein_distance(word_pattern : set[WordPattern]) -> set[WordPattern]:
         word_patterns_lists = [word_pattern.get_1_levenshtein_distance_patterns() for word_pattern in word_pattern]
         return set(itertools.chain(*word_patterns_lists))
 
     def _get_candidate_words(words_pattern : set[WordPattern], dictionary : Dictionary) -> list[tuple[str,float]]:
-        lists_of_lists_of_words =  [pattern.get_my_matches(dictionary) for pattern in words_pattern]
+        lists_of_lists_of_words =  [pattern.get_my_matches(dictionary) for pattern in words_pattern if pattern.pattern != '']
         return set(itertools.chain(*lists_of_lists_of_words))
     
-    def _not_enough_generated_word(self, distance : int, number_of_candidate_words, word:str):
-        return (self.phrase_evaluator.get_max_lev_distance(word) > distance and 
-                self.phrase_evaluator.get_number_of_words() > number_of_candidate_words )
         
-    def get_new_phrases(self, alternative_word : list[tuple[str,float]], index : int, word_error : str) -> list[tuple[Phrase,float]]: 
-        new_phrases = [self._generate_phrases(index, candidate) for candidate in alternative_word]
+    def get_new_sentences(self, alternative_word : list[tuple[str,float]], index : int, word_error : str) -> list[tuple[Sentence,float]]: 
+        new_sentences = [self._generate_sentences(index, candidate) for candidate in alternative_word]
         eventual_puntaction = add_last_punctuation(word_error)
         if(eventual_puntaction):
             alternative_word_with_punctation = [(candidate_word + eventual_puntaction , candidate_word_probability)
                                                  for candidate_word, candidate_word_probability in alternative_word]
-            new_phrases = new_phrases + [self._generate_phrases(index, candidate_with_punctation) 
+            new_sentences = new_sentences + [self._generate_sentences(index, candidate_with_punctation) 
                                  for candidate_with_punctation in alternative_word_with_punctation ]
-        return new_phrases
+        return new_sentences
     
-    def _generate_phrases(self, index: int, candidate : tuple[str, float]):
+    def _generate_sentences(self, index: int, candidate : tuple[str, float]):
         candidate_word, candidate_word_probability = candidate
-        return (Phrase(self.text[:index] + [candidate_word] + self.text[index+1:], self.phrase_evaluator), candidate_word_probability)
+        return (Sentence(self.text[:index] + [candidate_word] + self.text[index+1:], self.sentence_evaluator), candidate_word_probability)
 
-    def selected_phrases(self, candidate_phrases : list[tuple[Phrase,float]]) -> list[Phrase]:
-        prhase_with_score = self.compute_phrase_score(candidate_phrases)
-        selection_algorithm = RouletteWheel(self.phrase_evaluator.get_number_of_phrases(), prhase_with_score, lambda tuple : tuple[1])
-        return [phrase[0] for phrase, _ in selection_algorithm.extract_individuals()]
+    def selected_sentences(self, candidate_sentences : list[tuple[Sentence,float]]) -> list[Sentence]:
+        sentence_with_score = self.compute_sentence_score(candidate_sentences)
+        selection_algorithm = RouletteWheel(self.sentence_evaluator.get_number_of_sentences(), sentence_with_score, lambda tuple : tuple[1])
+        return [sentence[0] for sentence, _ in selection_algorithm.extract_individuals()]
     
-    def compute_phrase_score(self, generated_phrases : list[tuple[Phrase, float]]):
-        sum_of_score = sum([score for _,score in generated_phrases])
-        normalized_words_score = [(score/sum_of_score) for _,score in generated_phrases]
-        prhases_score = [phrase.get_score() for phrase,_ in generated_phrases]
-        sum_of_phrases_score = sum(prhases_score)
-        normaized_phrases_score = [score /sum_of_phrases_score for score in prhases_score]
-        total_phrase_score = list_sum(normalized_words_score,normaized_phrases_score)
-        return [(phrase, score) for phrase, score in zip(generated_phrases, total_phrase_score)]
+    def compute_sentence_score(self, generated_sentences : list[tuple[Sentence, float]]):
+        sum_of_score = sum([score for _,score in generated_sentences])
+        normalized_words_score = [(score/sum_of_score) for _,score in generated_sentences]
+        sentences_score = [sentence.get_score() for sentence,_ in generated_sentences]
+        sum_of_sentences_score = sum(sentences_score)
+        normaized_sentences_score = [score /sum_of_sentences_score for score in sentences_score]
+        total_sentence_score = list_sum(normalized_words_score,normaized_sentences_score)
+        return [(sentence, score) for sentence, score in zip(generated_sentences, total_sentence_score)]
+    
+    
+    
+class BERTSentenceCorrector():
+    def __init__(self, dictionary_dataset : list[str], input_dataset : list[str]) -> None:
+        self.evolutionary_parameters = EvolutionaryParameters()
+        self.dictionary = Dictionary(dictionary_dataset)
+        self.sentence_evaluator = SentenceEvaluator(BERTEvaluator(), self.evolutionary_parameters)
+        self.input_dataset = input_dataset 
+         
+    def correct_sentences(self) -> list[str]:
+        return [self.sentence_correction(sentence).get_text() for sentence in self.input_dataset]            
         
-def phrase_correction(text :str, dictionary):
-    evolutionary_parameters = EvolutionaryParameters()
-    phrase_evaluator = PhraseEvaluator(BERTEvaluator(), evolutionary_parameters)
-    phrase = Phrase(text.split(),phrase_evaluator)
-    all_phrases = [phrase]
-    for error in phrase.get_error():
-        selected_phrases = select_best_phrases(all_phrases, evolutionary_parameters.get_number_of_phrases())
-        all_phrases = get_candidate_phrases(selected_phrases, error, dictionary)
-    return get_best_phrase(all_phrases)
+    def sentence_correction(self, text :str):
+        sentence = Sentence(text.split(),self.sentence_evaluator)
+        all_sentences = [sentence]
+        for error in sentence.get_error():
+            selected_sentences = select_best_sentences(all_sentences, self.evolutionary_parameters.get_number_of_sentences())
+            alternative_words = self.get_alternative_word(error[1])
+            all_sentences = get_candidate_sentences(selected_sentences, error, alternative_words)
+        return get_best_sentence(all_sentences)
 
-def get_candidate_phrases(list_of_phrases : list[Phrase], error : tuple[str,float], dictionary : Dictionary) -> list[Phrase]:
-    candidate_phrases = [phrase.get_alternative(error, dictionary) for phrase in list_of_phrases]
-    return list(itertools.chain(*candidate_phrases))
+    def get_alternative_word(self, word : str) -> list[tuple[str,float]]:
+            word_without_punctation = remove_punctuaction(word)
+            set_of_candidate_pattern = set([WordPattern(word), WordPattern(word_without_punctation)]) #we use set to remove word_without_puncation #
+                                                                                                    #if the word and the word without punctatio are equal
+            candidate_words = set([(word,1), (word_without_punctation,1)])
+            levenshtein_distance = 0
+            while(not_enough_generated_word(levenshtein_distance, len(candidate_words), word, self.sentence_evaluator)):
+                set_of_candidate_pattern = set_of_candidate_pattern.union(Sentence._get_n_lenveshtein_distance(set_of_candidate_pattern))
+                candidate_words = candidate_words.union(Sentence._get_candidate_words(set_of_candidate_pattern, self.dictionary))
+                levenshtein_distance +=1
+            return candidate_words
+    
+    def levensthein_distance_improvement(self, ground_truth : list[str]):
+         return (avg_levenshtein_ratio(self.input_dataset,ground_truth), avg_levenshtein_ratio(self.correct_sentences(),ground_truth))
 
-def select_best_phrases(all_phrases : list[Phrase], number_of_phrases_to_select : int):
-    eval_function = lambda phrase  : phrase.get_score()
-    best_phrases = RouletteWheel(number_of_phrases_to_select, all_phrases, eval_function).extract_individuals()
-    return best_phrases
+def not_enough_generated_word(distance : int, number_of_candidate_words : int, word : str, sentence_evaluator : SentenceEvaluator):
+    return (sentence_evaluator.get_max_lev_distance(word) > distance and 
+            sentence_evaluator.get_number_of_words() > number_of_candidate_words )
 
-def get_best_phrase(selected_phrases : list[Phrase]):
-    return max(selected_phrases, key= lambda prhase : prhase.get_score())
+def get_candidate_sentences(list_of_sentences : list[Sentence], error : tuple[str,float], candidate_words : list[tuple[str,float]]) -> list[Sentence]:
+    candidate_sentences = [sentence.get_alternative(error, candidate_words) for sentence in list_of_sentences]
+    return list(itertools.chain(*candidate_sentences))
+
+def select_best_sentences(all_sentences : list[Sentence], number_of_sentences_to_select : int):
+    eval_function = lambda sentence  : sentence.get_score()
+    best_sentences = RouletteWheel(number_of_sentences_to_select, all_sentences, eval_function).extract_individuals()
+    return best_sentences
+
+def get_best_sentence(selected_sentences : list[Sentence]):
+    return max(selected_sentences, key= lambda sentence : sentence.get_score())
 
 class RouletteWheel():
     def __init__(self,number_of_elements : int, sample : list, eval_function : callable) -> None:

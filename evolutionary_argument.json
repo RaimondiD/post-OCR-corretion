@@ -1,7 +1,5 @@
 {
     "words_for_generation" : 20,
-    "phrases_for_generation": 5,
+    "sentences_for_generation": 5,
     "error_treshold" : 0.5
-    
-
 }

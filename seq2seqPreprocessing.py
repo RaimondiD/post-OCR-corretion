@@ -4,7 +4,7 @@ import regex as re
 from typing import Callable
 import more_itertools
 import itertools
-import trainTestSplitter
+from collections import defaultdict
 
 DATASET_DIRCECTORY = Path("dataset")
 TEST_INPUT_FILE = Path(DATASET_DIRCECTORY,"train_output.csv")  #I use only the output file because i want to fine-tune a model that learn how to put spaces in text,
@@ -24,8 +24,9 @@ class IndexTranslator():
     def __init__(self, dataset : list [list[str]]) -> None:
         self.special_symbol = [DEFAULT_UNKNOW_SYMBOL,DEFAULT_PADDING_SYMBOL,START_OF_SENTENCE_SYMBOL,END_OF_SENTENCE_SYMBOL]
         self.index_char_dictionary = self.__create_char_dictionary(dataset)
-        self.char_index_dictionary = {char:index for index,char in self.index_char_dictionary.items()}
-
+        char_index_strict_dictionary = {char:index for index,char in self.index_char_dictionary.items()}
+        self.char_index_dictionary = defaultdict(lambda : self.special_symbol.index(DEFAULT_UNKNOW_SYMBOL), char_index_strict_dictionary)
+        
     def encode_sequence(self, sentence_as_a_sequence :list[str]) -> list[str]:
         return [self.char_index_dictionary[char] for char in sentence_as_a_sequence]
     
@@ -47,7 +48,7 @@ class IndexTranslator():
             set_of_char = set_of_char.union(sequence)
         sorted_character_set = sorted(list(set_of_char))
         char_dictionary = {index : char for index,char in enumerate(self.special_symbol + sorted_character_set)}  #we want that special symbol have the first position
-        return char_dictionary
+        return defaultdict(lambda : DEFAULT_UNKNOW_SYMBOL, char_dictionary)
     
     def get_padding_index(self) -> int:
         return self.char_index_dictionary[DEFAULT_PADDING_SYMBOL]
@@ -58,20 +59,21 @@ class IndexTranslator():
     def get_max_length(self) -> int:
         return MAX_SEQUENCE_LEN + 2
         
-def transform_data_to_token(dataset_object : trainTestSplitter.TrainTestSplitter, dimension_of_dataset = -1):    #when dimension_of_dataset is equal to -1 we use the whole data
-    input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(dataset_object, dimension_of_dataset)
+def transform_data_to_token(seq2seq_dataset, transaltor_object = None):    #when dimension_of_dataset is equal to -1 we use the whole data
+    input_sentence_dataset, output_sentence_dataset = get_clean_string_dataset(seq2seq_dataset)
     input_sequence_of_chars_dataset = sentence_as_a_list_of_chars(input_sentence_dataset)
     output_sequence_of_chars_dataset = sentence_as_a_list_of_chars(output_sentence_dataset)
-    encoding_object = IndexTranslator(output_sequence_of_chars_dataset)
-
+    if(not transaltor_object):
+        encoding_object = IndexTranslator(output_sequence_of_chars_dataset)
+    else:
+        encoding_object = transaltor_object
     return (create_regular_ML_dataset(input_sequence_of_chars_dataset,encoding_object), 
         create_regular_ML_dataset(output_sequence_of_chars_dataset,encoding_object),
         encoding_object)
 
 
-def get_clean_string_dataset(dataset_object : trainTestSplitter.TrainTestSplitter, last_index = -1):
-    dataset = dataset_object.get_seq2seq_dataset()
-    dataset_sample = dataset[:last_index]
+def get_clean_string_dataset(dataset : list[str]):
+    dataset_sample = dataset
     cleaned_dataset_sample = clean_dataset(dataset_sample)
     output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
     input_sentence_dataset = make_input_dataset(output_sentence_dataset)

@@ -24,8 +24,11 @@ class TrainTestSplitter():
         dictionary_for_row = pd.read_csv(dataset_path)
         return dictionary_for_row
     
-    def get_seq2seq_dataset(self)-> list[str]:
+    def get_seq2seq_train_dataset(self)-> list[str]:
         return self.train_output_dataset[DATA_LABEL_OUTPUT_DATASET]
+    
+    def get_seq2seq_test_dataset(self) -> list[str]:
+        return self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET]
 
     def get_BERT_train_data(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
         return self.train_input_dataset,  self.train_output_dataset
@@ -36,3 +39,5 @@ class TrainTestSplitter():
     def get_dictionary_data(self) -> list[str]:
         return self.train_output_dataset[DATA_LABEL_OUTPUT_DATASET]
     
+    def get_test_string_datasets(self) -> tuple[list[str],list[str]]:
+        return self.test_input_dataset[DATA_LABEL_INPUT_DATASET], self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET]

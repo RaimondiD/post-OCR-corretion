@@ -9,8 +9,8 @@ class BERTEvaluator():
         self.model = AutoModelForTokenClassification.from_pretrained(MODEL_PATH)
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
     
-    def evalate_phrase(self, text : list[str])-> list[str,float]:
-        inputs = self.tokenizer(text, return_tensors="pt", is_split_into_words= True)
+    def evalate_sentence(self, text : list[str])-> list[str,float]:
+        inputs = self.tokenizer(text, return_tensors="pt", is_split_into_words= True, truncation= True)
         token_word_mapping = inputs.word_ids()
         with torch.no_grad():
             logits = self.model(**inputs).logits 
@@ -22,9 +22,9 @@ class BERTEvaluator():
         return words_probability
 
     def get_wrong_indexes(self, text : list[str]):
-        return [(index, word) for index, (word, probability) in enumerate(self.evalate_phrase(text)) if probability < 0.5]
+        return [(index, word) for index, (word, probability) in enumerate(self.evalate_sentence(text)) if probability < 0.5]
     
     def get_score(self, text : list[str]):
-        probability_of_word = self.evalate_phrase(text)
+        probability_of_word = self.evalate_sentence(text)
         sum_of_probability = sum([word_and_probability[1] for word_and_probability in probability_of_word])
         return sum_of_probability/len(probability_of_word)
