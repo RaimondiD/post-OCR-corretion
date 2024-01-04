@@ -76,7 +76,7 @@ class testDatasetManagement(unittest.TestCase):
 
 
 class testTrainingAndTest(unittest.TestCase):
-    def __init__(self,*args,**kwargs) -> None:
+    def __init256__(self,*args,**kwargs) -> None:
         self.dataset_manager = seq2seqLearning.ManageDataset(DIMENSION_OF_SAMPLE)
         padding_index = self.dataset_manager.get_translatorObject().get_padding_index()
         self.criterion = torch.nn.CrossEntropyLoss(ignore_index = padding_index)    
@@ -141,7 +141,7 @@ class testBertEvaluator(unittest.TestCase):
     def test_bert_evaluator(self):
         sentence = "the dis0ric! is in the cit.".split()
         bert_model = BERTEvaluator.BERTEvaluator()
-        print(bert_model.evalate_sentence(sentence))
+        print(bert_model.evaluate_sentence(sentence))
         print(bert_model.get_wrong_indexes(sentence))
         print(bert_model.get_score(sentence))
                         

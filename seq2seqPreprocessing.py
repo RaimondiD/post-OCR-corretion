@@ -12,7 +12,7 @@ TEST_INPUT_FILE = Path(DATASET_DIRCECTORY,"train_output.csv")  #I use only the o
 #position. To build this type of dataset i need a dataset with the spaces in the correct position, so i use the output file."""
 ENCODING_DEFAULT_SEPARATOR_SYMBOL = "#"
 DATASET_WORD_SEPARATOR_SYMBOL = ' '
-MAX_SEQUENCE_LEN = 32
+MAX_SEQUENCE_LEN = 256 
 DEFAULT_UNKNOW_SYMBOL = "<unk>"
 END_OF_SENTENCE_SYMBOL = '<eos>'  
 START_OF_SENTENCE_SYMBOL = '<bos>'
@@ -71,23 +71,20 @@ def transform_data_to_token(seq2seq_dataset, transaltor_object = None):    #when
         create_regular_ML_dataset(output_sequence_of_chars_dataset,encoding_object),
         encoding_object)
 
-
 def get_clean_string_dataset(dataset : list[str]):
-    dataset_sample = dataset
-    cleaned_dataset_sample = clean_dataset(dataset_sample)
-    output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset_sample)
+    cleaned_dataset = remove_backslash(dataset)
+    output_sentence_dataset = shorten_sequences_to_target_lenght(cleaned_dataset)
     input_sentence_dataset = make_input_dataset(output_sentence_dataset)
-    return input_sentence_dataset,output_sentence_dataset
+    return input_sentence_dataset, output_sentence_dataset
 
 
 def load_dataset(file = TEST_INPUT_FILE) -> list[str]: 
     with open(file, encoding = "utf-8", errors= "ignore") as reference_to_dataset_file:
         return list(csv.reader(reference_to_dataset_file))  
 
-def clean_dataset(dataset:list[str]):
+def remove_backslash(dataset:list[str]):
     remove_backslash_func = substitute_symbol_func_factory(r"[\\]")
     dataset_without_backslash = list(map(remove_backslash_func,dataset))
-    
     return list(map(lambda sentence : sentence.lower(),dataset_without_backslash))
 
 def substitute_symbol_func_factory(regex_of_target:str,substitute = ""):
@@ -117,7 +114,7 @@ def shorten_sequences_to_target_lenght(long_sequence_dataset : list[str]):
     ok_sequences += split_longer_sequences(long_sequences,too_long)
     return ok_sequences
 
-def split_longer_sequences(long_sequences:list[str], too_long :Callable[[str],bool]):                                                      
+def split_longer_sequences(long_sequences: list[str], too_long : Callable[[str],bool]):                                                      
     short_sequences = []
     while(long_sequences):
         splitted_list_of_list = list(map(split_in_middle_space,long_sequences)) 

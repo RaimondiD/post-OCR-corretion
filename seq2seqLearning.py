@@ -25,7 +25,7 @@ class Seq2SeqDataset(Dataset):
         return self.input_sequence[index], self.target_sequence[index]
 
 class ManageDataset():
-    def __init__(self, seq2seq_train_dataset : list[str], seq2seq_test_dataset):
+    def __init__(self, seq2seq_train_dataset : list[str], seq2seq_test_dataset :list[str]):
         self.train_input, self.train_output, self.translatorObject = transform_data_to_token(seq2seq_train_dataset)
         self.test_input, self.test_output, _  = transform_data_to_token(seq2seq_test_dataset, self.translatorObject)
     

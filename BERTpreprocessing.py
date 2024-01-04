@@ -1,10 +1,8 @@
 import seq2seqPreprocessing
-from datasets import Dataset
+from datasets import Dataset, Sequence, ClassLabel
 from trainTestSplitter import TrainTestSplitter 
 from transformers import AutoTokenizer, DataCollatorForTokenClassification
 
-INPUT_DATASET_PATH =  "dataset/train_input.csv"
-OUTPUT_DATASET_PATH = "dataset/train_output.csv"
 DATASET_SEPARATOR_SYMBOL = " "
 DEFAULT_DATA_COLUMN_NAME = "token"
 DEFAULT_PADDING_VALUE = -100
@@ -28,11 +26,15 @@ class DatasetPreprocessor():
         input_data = input_clean_dataset[DEFAULT_DATA_COLUMN_NAME]
         output_data = output_clean_dataset[DEFAULT_DATA_COLUMN_NAME]
         column_with_labels = DatasetPreprocessor._get_dataset_labels(input_data, output_data)
-        return input_clean_dataset.add_column("word_labels", column_with_labels) 
+        NAME_OF_LABELS_COLUMN = "word_labels"
+        return input_clean_dataset.add_column(NAME_OF_LABELS_COLUMN, 
+                                    column_with_labels) \
+                                    .cast_column(NAME_OF_LABELS_COLUMN,
+                                                Sequence(ClassLabel(names=[0,1])))
 
     def _clean_dataset(input_dataset) -> Dataset :
         input_dataset = Dataset.from_dict(input_dataset)                
-        clean_dataset_function = DatasetPreprocessor._get_map_function_from_function_on_data(seq2seqPreprocessing.clean_dataset)
+        clean_dataset_function = DatasetPreprocessor._get_map_function_from_function_on_data(seq2seqPreprocessing.remove_backslash)
         input_clean_dataset = input_dataset.map(clean_dataset_function, batched=True) 
         split_data_function = DatasetPreprocessor._get_map_function_from_function_on_data(DatasetPreprocessor._get_data_splitted)
         input_splitted_dataset = input_clean_dataset.map(split_data_function, batched = True)
@@ -68,7 +70,7 @@ class DatasetPreprocessor():
         for i, word in enumerate(input_sequence):
             #The idea is to check if the word in the input is also in the output in a similar position.
             #To do so i use a window with a size proportional to the differnce of the lenght of the two sequences
-            left_windows_index = max(0, i - len_difference)
+            left_windows_index = max(0, i - len_difference - 1)
             right_windows_index = min(len(output_sequence), i + len_difference +1)
             if word in output_sequence[left_windows_index : right_windows_index]: 
                 token_lable.append(1) #1 is the label assigned at the right word
@@ -114,8 +116,8 @@ class DatasetTokenizer():
                 else:  # Only label the first token of a given word.
                     label_ids.append(label[word_idx])
                 previous_word_idx = word_idx
-            labels.append(label_ids)
-        return labels
+            labels.append(         )
+        return labels 
     
     def get_data_collator(self):
         return self.data_collator 

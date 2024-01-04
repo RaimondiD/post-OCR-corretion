@@ -11,14 +11,14 @@ class EvaluationManager():
     def __init__(self) -> None:
         self.label_list = ["S-0","S-1"]
         self.evaluate_object = evaluate.load('seqeval')
-    
+       
     def compute_metrics(self, model_prediction_and_label) -> dict:
         model_predictions, labels = model_prediction_and_label
         value_predictions = np.argmax(model_predictions, axis=2)
 
         true_predictions = [
-           [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
-         for prediction, label in zip(value_predictions, labels)
+            [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(value_predictions, labels)
         ]
         true_labels = [
            [self.label_list[l] for (_, l) in zip(prediction, label) if l != -100]

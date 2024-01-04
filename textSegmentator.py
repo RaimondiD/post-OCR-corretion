@@ -58,10 +58,6 @@ class Seq2SeqTextSplitter(TextSplitter):
         return (seq2seqEvaluation.avg_levenshtein_ratio(self.input_phrases, self.output_phrases), 
                 seq2seqEvaluation.avg_levenshtein_ratio(self.get_splitted_sentences(), self.output_phrases))
 
-def evalute_seq2seq(dataset_manager : seq2seqLearning.ManageDataset, criterion, model : seq2seqLearning.Transformer,
-                  batch_size : int):
-    translator_object = dataset_manager.get_translatorObject()
-    test_dataset = dataset_manager.get_test_dataset()
-    test_object = seq2seqEvaluation.Sequence2SequenceEvaluator(model,batch_size, criterion, test_dataset, translator_object)
-    print(f"loss_on_model_on_test_dataset : {test_object.evaluate_model()}, levenshtein_distance of the result : {test_object.get_levenshtein_similarity()}")
-    
+    def evalute_seq2seq(self):
+        print(f"loss_on_model_on_test_dataset : {self.evaluator.evaluate_model()}, levenshtein_distance of the result : {self.evaluator.get_levenshtein_similarity()}")
+        

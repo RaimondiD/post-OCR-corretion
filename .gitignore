@@ -23,7 +23,6 @@ dataset/
 models/
 .metals/
 .vscode/
-test*
 wheels/
 share/python-wheels/
 *.egg-info/

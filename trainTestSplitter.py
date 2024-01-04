@@ -18,7 +18,7 @@ class TrainTestSplitter():
             train_size=0.7) 
         self.train_input_dataset, self.test_input_dataset, self.train_output_dataset, self.test_output_dataset = list(map(
             lambda pandasDataset : pandasDataset.to_dict('list'), 
-            train_and_test_pandasDF)) 
+            train_and_test_pandasDF)) #Dataset with 2 columns, id for the number and orginal/solution for the string.
     
     def _load_dataset(dataset_path) -> pd.DataFrame:
         dictionary_for_row = pd.read_csv(dataset_path)
@@ -29,6 +29,12 @@ class TrainTestSplitter():
     
     def get_seq2seq_test_dataset(self) -> list[str]:
         return self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET]
+    
+    def get_input_dataset(self) -> list[str]:
+        return self.train_input_dataset[DATA_LABEL_INPUT_DATASET] + self.test_input_dataset[DATA_LABEL_INPUT_DATASET]
+    
+    def get_output_dataset(self) -> list[str]:
+        return self.train_output_dataset[DATA_LABEL_OUTPUT_DATASET] + self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET]
 
     def get_BERT_train_data(self) -> tuple[dict[str,list[str]], dict[str, list[str]]]:
         return self.train_input_dataset,  self.train_output_dataset
@@ -40,4 +46,4 @@ class TrainTestSplitter():
         return self.train_output_dataset[DATA_LABEL_OUTPUT_DATASET]
     
     def get_test_string_datasets(self) -> tuple[list[str],list[str]]:
-        return self.test_input_dataset[DATA_LABEL_INPUT_DATASET], self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET]
+        return self.test_input_dataset[DATA_LABEL_INPUT_DATASET], self.test_output_dataset[DATA_LABEL_OUTPUT_DATASET] #with this we are taking only the string column

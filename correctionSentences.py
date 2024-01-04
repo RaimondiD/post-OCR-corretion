@@ -11,8 +11,9 @@ from collections  import defaultdict
 from datasets.utils.logging import disable_progress_bar, enable_progress_bar
 from BERTEvaluator import BERTEvaluator
 from seq2seqEvaluation import avg_levenshtein_ratio
-
 from datasets import Dataset
+
+
 PROBABILITY_OF_OPERATION = {
     "substitution" : 0.7,
     "deletion" : 0.15,
@@ -20,8 +21,8 @@ PROBABILITY_OF_OPERATION = {
 }
 #nltk.download('words') at the first execution download the packa
 
-REGEX_SPECIAL_CHARACTER_MAPPING = [ (r"\?" , "E"), (r"\^" , "S"), (r"\."  , "P"), (r"\\w" , "W"), (r"\\." , "P"), (r"\[" , "Q"), (r"\*", "A"), (r"\(", "T")]
-SPECIAL_REGEX_CHARACTER_MAPPING = [ ("E" , r"\?"), ("S" , r"\^"), ("P" , r"\\."), ("W" , r"\\w"), ("Q", r"\["), ("A", r"\*"), ("T", r"\(") ]
+REGEX_SPECIAL_CHARACTER_MAPPING = [ (r"\|", "B"),  (r"\?" , "E"), (r"\^" , "S"), (r"\."  , "P"), (r"\\w" , "W"), (r"\\." , "P"), (r"\[" , "Q"), (r"\*", "A"), (r"\(", "T"),(r"\+","U"),(r"\)","C"), (r"\[", "Z")]
+SPECIAL_REGEX_CHARACTER_MAPPING = [("B", r"\|"), ("E" , r"\?"), ("S" , r"\^"), ("P" , r"\\."), ("W" , r"\\w"), ("Q", r"\["), ("A", r"\*"), ("T", r"\("),("U",r"\+"),("C",r"\)"),("Z",r"\]") ]
 EVOLUTIONARY_ARGUMENT_PATH = "evolutionary_argument.json"
     
 class Dictionary():
@@ -32,21 +33,30 @@ class Dictionary():
         self.word_datasets = self._get_optimized_dataset(train_words, english_words)
         
     def _get_train_word(train_sentences : list[str]):
-        clean_train_sentences = seq2seqPreprocessing.clean_dataset(train_sentences)
+        clean_train_sentences = seq2seqPreprocessing.remove_backslash(train_sentences)
         train_words_lists = list(map(lambda sentence : sentence.split(" "), clean_train_sentences))
         flattened_word_list = itertools.chain(*train_words_lists)
         words_without_puntaction = map(remove_punctuaction, flattened_word_list)
         lowercase_words  = [word.lower() for word in words_without_puntaction if len(word)!=0]
         return set(lowercase_words)
     
-    def _get_optimized_dataset(self, train_words: set[str], english_words : set[str]) -> Dataset  :
+    def _get_optimized_dataset(self, train_words: set[str], english_words : set[str]) -> dict[str,Dataset]  :
         set_of_words = english_words.union(train_words)
         alphabetical_dict = defaultdict(lambda : [])
         for word in set_of_words:
-            alphabetical_dict[word[0]]  = alphabetical_dict[word[0]] + [word]
-        for starting_letter in alphabetical_dict:
-            alphabetical_dict[starting_letter] = Dictionary._get_dataset_structure(alphabetical_dict[starting_letter])
+            dict_key = Dictionary._get_dict_key(word)
+            alphabetical_dict[dict_key]  += [word]
+        for key in alphabetical_dict:
+            alphabetical_dict[key] = Dictionary._get_dataset_structure(alphabetical_dict[key])
         return alphabetical_dict
+    
+    def _get_dict_key(word):
+        starting_char = word[0]
+        end_char = word[-1]
+        if len(word) > 2:
+            starting_char = word[:2] if word[:1] == "\\" else starting_char
+            end_char = word[-2:] if word[-2:-1] == "\\" else end_char
+        return  starting_char + end_char
     
     def _get_dataset_structure(list_of_word : list[str]) -> Dataset:
         dataset_formatting = [{"value" : word } for word in list_of_word]
@@ -54,21 +64,20 @@ class Dictionary():
         
     def dictionary_matches(self, pattern : str) -> list[str]:
         compiled_pattern = re.compile(r"^" + pattern + r"$") #get the word of the same lenght that match the word
-        correct_letters_dataset = self.get_related_datasets(pattern[0])
-        if correct_letters_dataset != [[]]:
-            disable_progress_bar()
-            matches_of_all_datasets = [Dictionary._get_dataset_match(dataset, compiled_pattern) for dataset in correct_letters_dataset]
-            enable_progress_bar() #disable and re-enable progress bar
-            return set(itertools.chain(*matches_of_all_datasets))
-        else:
+        try:
+            matching_datasets = [self.word_datasets[key] for key in self.get_related_datasets(pattern)]
+            if matching_datasets != [[]]:
+                disable_progress_bar()
+                matches_of_all_datasets = [Dictionary._get_dataset_match(dataset, compiled_pattern) for dataset in matching_datasets]
+                enable_progress_bar() #disable and re-enable progress bar
+                return set(itertools.chain(*matches_of_all_datasets))   
+        finally:
             return set()
         
-    def get_related_datasets(self, first_pattern_letters : str) -> list[Dataset]:  #i'v created a datasets for each starting letters; here i return only the dataset
-        if first_pattern_letters == r"\\w":                                                                        #with the first letters that match with the first letter of the pattern
-            dictionary_first_letters = [letter for letter in self.word_datasets]
-        else:
-            dictionary_first_letters = [first_pattern_letters]
-        return [self.word_datasets[letter] for letter in dictionary_first_letters]
+    def get_related_datasets(self, pattern : str) -> list[str]:  #i'v created a datasets for each starting letters; here i return only the dataset
+        dict_key_from_pattern = Dictionary._get_dict_key(pattern)
+        compiled_key_pattern = re.compile(dict_key_from_pattern)
+        return list(filter(lambda key: re.match(compiled_key_pattern,key), self.word_datasets.keys()))
         
     def _get_dataset_match(targt_dataset : Dataset, pattern : re.compile):
         partial_application_of_filter_function = lambda batch : Dictionary._batch_filter_function(batch, pattern)
@@ -149,7 +158,7 @@ class EvolutionaryParameters(modelArgumentManagement.ArgumentFromJson):
         return self.parameters_dict['error_treshold']
     
     def get_max_lev_distance(self, word):
-        return max(1, min(2, len(word)/2))
+        return 1 #max(1, min(2, len(word)/2))
     
     def get_number_of_words(self):
         return self.parameters_dict['words_for_generation']
@@ -224,8 +233,8 @@ class Sentence():
         return [sentence[0] for sentence, _ in selection_algorithm.extract_individuals()]
     
     def compute_sentence_score(self, generated_sentences : list[tuple[Sentence, float]]):
-        sum_of_score = sum([score for _,score in generated_sentences])
-        normalized_words_score = [(score/sum_of_score) for _,score in generated_sentences]
+        sum_of_words_score = sum([score for _,score in generated_sentences])
+        normalized_words_score = [(score/sum_of_words_score) for _,score in generated_sentences]
         sentences_score = [sentence.get_score() for sentence,_ in generated_sentences]
         sum_of_sentences_score = sum(sentences_score)
         normaized_sentences_score = [score /sum_of_sentences_score for score in sentences_score]
@@ -249,7 +258,7 @@ class BERTSentenceCorrector():
         all_sentences = [sentence]
         for error in sentence.get_error():
             selected_sentences = select_best_sentences(all_sentences, self.evolutionary_parameters.get_number_of_sentences())
-            alternative_words = self.get_alternative_word(error[1])
+            alternative_words = self.get_alternative_word(str(error[1]).lower())
             all_sentences = get_candidate_sentences(selected_sentences, error, alternative_words)
         return get_best_sentence(all_sentences)
 

@@ -6,8 +6,8 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 TRAINING_PARAMETER_DEFAULT_PATH = pathlib.Path("training_object_parameters.json")
-SAVE_MODEL_PATH = pathlib.Path("models/test_checkpoint")
-NAME_OF_SAVED_MODEL = pathlib.Path("seq2seq_test_model")
+SAVE_MODEL_PATH = pathlib.Path("models/seq2seqTrain")
+NAME_OF_SAVED_MODEL = pathlib.Path("seq2seq_256_model")
 TENSORBOARD_RESULT = pathlib.Path("models/tensorboard/seq2seq_tran_loss")
 
 
@@ -58,7 +58,8 @@ class TrainTransformer(TrainTestTransformer) :
             print(f"[Epoch {epoch} / {self.num_epochs}], average train loss : {avg_loss}")
             scheduler.step(avg_loss)
             epoch += 1
-            
+        
+        self.save_checkpoint(epoch,step)
         return self.model
     
     def load_checkpoint(self):
@@ -73,7 +74,7 @@ class TrainTransformer(TrainTestTransformer) :
         return epoch, step
 
     def save_checkpoint(self, epoch : int, step : int):
-            save_path =  SAVE_MODEL_PATH.joinpath(f"seq2seq_model{epoch}.pt")
+            save_path =  SAVE_MODEL_PATH.joinpath(f" {NAME_OF_SAVED_MODEL}{epoch}.pt")
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': self.model.state_dict(),
