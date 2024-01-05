@@ -116,7 +116,7 @@ class DatasetTokenizer():
                 else:  # Only label the first token of a given word.
                     label_ids.append(label[word_idx])
                 previous_word_idx = word_idx
-            labels.append(         )
+            labels.append(label_ids)
         return labels 
     
     def get_data_collator(self):
