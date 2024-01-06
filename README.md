@@ -1,5 +1,5 @@
 # post-OCR corretion
-A Unimi project that addresses the task of experimenting with information retrivial techniques with the aim of correcting OCR error
+A Unimi project that uses NLP tecniques with the aim to correct post OCR errors 
 
 I use the dataset provided for the ALTA 2017 Challenge, it is available on kaggle at the link https://www.kaggle.com/datasets/dmollaaliod/correct-ocr-errors. To run the code create a directory dataset on the main path and put all the files provided for the challenge here.
 
