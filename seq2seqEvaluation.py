@@ -2,6 +2,7 @@ from seq2seqLearning import Transformer, TrainTestTransformer
 from seq2seqPreprocessing import IndexTranslator
 import torch
 import Levenshtein
+import numpy as np
 
 
 
@@ -63,10 +64,12 @@ def avg_levenshtein_ratio(produced_sequences : list[list[str]] | list[str], corr
                           sequence_to_phrase = lambda string :str.lower(string)) -> float:
     sum_of_levensthein_ratio = 0
     number_of_sequences = len(produced_sequences)
-    
+    list_of_lev_distance = [] 
     for model_sequence, target_encoded_sequence in zip(produced_sequences, correct_sequences):
-        sum_of_levensthein_ratio += Levenshtein.ratio(model_sequence, target_encoded_sequence, processor = sequence_to_phrase)
-    return sum_of_levensthein_ratio / number_of_sequences
+        list_of_lev_distance += [Levenshtein.ratio(model_sequence, target_encoded_sequence, processor = sequence_to_phrase)]
+    print(f"avg of lev.distance : {np.average(np.array(list_of_lev_distance))} \
+          std. deviation : {np.std(np.array(list_of_lev_distance))}")
+    return np.average(np.array(list_of_lev_distance))
         
 def convert_list_to_string(sequence_of_char : list[list[str]]) -> str :
     string_of_char = "".join(sequence_of_char)

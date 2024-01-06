@@ -30,7 +30,7 @@ def correct_sentences():
     dataset_object = trainTestSplitter.TrainTestSplitter()
     segmentator = textSegmentator.DummyTextSplitter(dataset_object)
     segmentator_output = segmentator.get_splitted_sentences()
-    corrector = correctionSentences.BERTSentenceCorrector(dataset_object.get_dictionary_data()[:20], segmentator_output[:20])
-    print(corrector.levensthein_distance_improvement(dataset_object.get_test_string_datasets()[1][:20]))
+    corrector = correctionSentences.BERTSentenceCorrector(dataset_object.get_dictionary_data()[:50], segmentator_output[:20])
+    print(corrector.levensthein_distance_improvement(dataset_object.get_test_string_datasets()[1][:50]))
 
-train_seq2seq()
+correct_sentences()
