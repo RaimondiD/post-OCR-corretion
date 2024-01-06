@@ -7,7 +7,6 @@ import torch
 import random
 RANDOM_SEED = 12062022
 DEFAULT_BATCH_SIZE = 32
-DIMENSION_OF_SAMPLE = 3
 torch.manual_seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
 

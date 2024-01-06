@@ -44,7 +44,7 @@ def get_accuracy_from_confusion_matrix(confusion_matrix):
     true_negative = confusion_matrix[NEGATIVE][NEGATIVE]
     false_positive = confusion_matrix[NEGATIVE][POSITIVE]
     false_negative = confusion_matrix[POSITIVE][NEGATIVE]
-    return true_positive + true_negative / (false_positive + false_negative)
+    return (true_positive + true_negative) / (false_positive + false_negative + true_positive + true_negative)
 
 def print_confusion_matrix(confusion_matrix : np.ndarray):
     
